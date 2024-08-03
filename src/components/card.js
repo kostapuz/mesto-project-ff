@@ -27,4 +27,4 @@ function deleteCard(evt) {
   evt.target.closest(".card").remove();
 }
 
-export {createCard, changeLike, deleteCard}
+export { createCard, changeLike, deleteCard };
