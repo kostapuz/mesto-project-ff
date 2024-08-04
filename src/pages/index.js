@@ -59,18 +59,17 @@ function saveImageData(data) {
 function handleFormSubmit(evt) {
   evt.preventDefault();
   const formElement = evt.target;
-  const inputs = formElement.querySelectorAll(".popup__input");
   const formName = formElement.getAttribute("name");
   const data = {};
   switch (formName) {
     case "edit-profile":
-      data.name = inputs[0].value;
-      data.job = inputs[1].value;
+      data.name = formElement.elements['name'].value;
+      data.job = formElement.elements['description'].value;
       saveEditData(data);
       break;
     case "new-place":
-      data.name = inputs[0].value;
-      data.link = inputs[1].value;
+      data.name = formElement.elements['place-name'].value;
+      data.link = formElement.elements['link'].value;
       saveImageData(data);
       break;
     default:

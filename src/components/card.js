@@ -1,4 +1,5 @@
 import { cardTemplate } from "../pages";
+
 // @todo: Функция создания карточки
 function createCard(data, deleteCard, toFullImage, changeLike) {
   const card = cardTemplate.querySelector(".card").cloneNode(true);
