@@ -16,7 +16,18 @@
 
 .popup__button:hover {
   background: rgba(0, 0, 0, 0.8);
+  color: white;
   cursor: pointer;
+}
+
+.popup__button_disabled {
+  color: rgba(0, 0, 0, 0.2);
+  background-color: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.2)
+}
+
+.popup__button_confirm-delete {
+  margin: 0;
 }
 
 @media screen and (max-width: 568px) {

@@ -28,4 +28,3 @@ function closePopupByClick (evt) {
 
 export {openModal, closeModal}
 
-

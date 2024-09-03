@@ -7,6 +7,24 @@
   background-size: cover;
   background-position: center;
   margin: 0 29px 0 0;
+  cursor: pointer;
+}
+
+.profile__image::before {
+  content: "";
+  display: block;
+  background-image: url(/src/images/pen-corrector.svg);
+  background-position: center;
+  background-repeat: no-repeat;
+  block-size: 120px;
+  inline-size: 120px;
+  opacity: 0;
+}
+
+.profile__image:hover::before {
+  background-color: rgba(0, 0, 0, 0.7);
+  opacity: 1;
+  transition: opacity 0.2s;
 }
 
 @media screen and (max-width: 740px) {
