@@ -1,3 +1,4 @@
+export { validationSettings, enableValidation, clearValidation };
 //Объект настроек
 const validationSettings = {
   formSelector: ".popup__form",
@@ -5,7 +6,7 @@ const validationSettings = {
   submitButtonSelector: ".popup__button",
   inactiveButtonClass: "popup__button_disabled",
   inputErrorClass: "popup__input_type_error",
-  errorClass: "popup__error_visible",
+  errorClass: "popup__error_visible"
 };
 
 //Функция показать текст ошибки и стилизовать ошибочный инпут
@@ -62,15 +63,11 @@ function toggleButtonStatus(inputList, buttonElement, validationSettings) {
 
 //Функция проверить валидность всех инпутов в 1 форме и изменить работу кнопки "Сохранить"
 function checkFormInputs(formElement, validationSettings) {
-  const inputList = Array.from(
-    formElement.querySelectorAll(validationSettings.inputSelector)
-  );
-  const buttonElement = formElement.querySelector(
-    validationSettings.submitButtonSelector
-  );
-  toggleButtonStatus(inputList, buttonElement, validationSettings);
+  const inputList = Array.from(formElement.querySelectorAll(validationSettings.inputSelector));
+  const buttonElement = formElement.querySelector(validationSettings.submitButtonSelector);
+  //Навесить слушатель на все импуты в 1 форме
   inputList.forEach((inputElement) => {
-    inputElement.addEventListener("input", function () {
+    inputElement.addEventListener("input", () => {
       checkInputValidy(formElement, inputElement, validationSettings);
       toggleButtonStatus(inputList, buttonElement, validationSettings);
     });
@@ -96,12 +93,7 @@ function clearValidation(formElement, validationSettings) {
   inputList.forEach((inputElement) =>
     hideInputError(formElement, inputElement, validationSettings)
   );
-  formElement.querySelector(
-    validationSettings.submitButtonSelector
-  ).disabled = true;
-  formElement
-    .querySelector(validationSettings.submitButtonSelector)
-    .classList.add(validationSettings.inactiveButtonClass);
+  formElement.querySelector(validationSettings.submitButtonSelector).disabled = true;
+  formElement.querySelector(validationSettings.submitButtonSelector).classList.add(validationSettings.inactiveButtonClass);
 }
 
-export { validationSettings, enableValidation, clearValidation };

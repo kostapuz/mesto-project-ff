@@ -12,7 +12,6 @@
 
 .popup__input_type_error {
   border-bottom: 1px solid red;
-  /*position: relative;*/
 }
 
 .popup__input:last-of-type {
@@ -25,9 +24,6 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 1.2;
-  /* position: absolute;
-  left: 10px;
-  bottom: 30%; */
 }
 
 @media screen and (max-width: 568px) {
