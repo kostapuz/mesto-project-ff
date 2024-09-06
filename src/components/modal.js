@@ -1,4 +1,4 @@
-import { validationSettings } from "./validation";
+export {openModal, closeModal}
 //Функция открыть модальное окно
 function openModal(popup) {
   popup.classList.add("popup_is-opened");
@@ -11,7 +11,6 @@ function closeModal(popup) {
   popup.classList.remove("popup_is-opened");
   document.removeEventListener('keydown', closePopupByEsc);
   popup.removeEventListener('click', closePopupByClick);
-  document.querySelector(validationSettings.formSelector).reset()//Вариант 2 - очищать формы при открытии попапа в слушателях в index.js
 }
 
 //Функция закрыть по ESC
@@ -28,5 +27,4 @@ function closePopupByClick (evt) {
   }
 }
 
-export {openModal, closeModal}
 

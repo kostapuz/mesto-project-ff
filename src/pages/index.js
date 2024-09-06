@@ -1,5 +1,5 @@
 import "./index.css";
-//import { initialCards } from "../components/cards.js";
+// import { initialCards } from "../components/cards.js";
 import { createCard, deleteCard } from "../components/card.js";
 import { openModal, closeModal } from "../components/modal.js";
 import {
@@ -16,7 +16,7 @@ import {
   addLike,
   deleteLike,
 } from "../components/api.js";
-export { cardTemplate, renderLoading, changeLike, setIdToDeleteCard };
+export { cardTemplate, renderLoading, changeLike };
 
 // @todo: DOM узлы
 const cardTemplate = document.querySelector("#card-template").content;
@@ -44,12 +44,12 @@ const formElement = document.querySelector(".popup__form");
 const avatarForm = document.forms["avatar"];
 const editProfileForm = document.forms["edit-profile"];
 const newPlaceForm = document.forms["new-place"];
+const confirmDeleteForm = document.forms["confirm-delete"];
 
 const nameInput = editProfileForm.querySelector(".popup__input_type_name");
 const jobInput = editProfileForm.querySelector(".popup__input_type_description");
 
-let userId
-let cardIdToDelete 
+let userId, cardToDelete, cardId;
 
 //Получить одновременно с сервера все карточки и инфо о пользователе и добавить все карточки в разметку
 Promise.all([getCardsFromApi(), getUserInfoFromApi()])
@@ -61,11 +61,13 @@ Promise.all([getCardsFromApi(), getUserInfoFromApi()])
     profileAvatar.style.backgroundImage = `url(${userInfoFromApi.avatar})`;
     //Добавить все карточки в разметку
     cardsFromApi.forEach((data) => {
-      const card = createCard(data, handleDeleteCard, toFullImage, changeLike, userId);
+      const card = createCard(data, prepareDeleteCard, toFullImage, changeLike, userId);
       placesList.append(card);
     });
   })
-  .catch((err) => console.error("Упс! Ошибка при загрузке данных о пользователе или карточках", err));
+  .catch((err) =>
+    console.error("Упс! Ошибка при загрузке данных о пользователе или карточках", err));
+
 
 //Функция открыть попап с данными Профиля
 function openPopupTypeProfile() {
@@ -74,47 +76,148 @@ function openPopupTypeProfile() {
   jobInput.value = profileDescription.textContent;
 }
 
-//Функция сохранить данные. Форма с Профилем
+//Функция сохранить данные. Форма с Профилем.
 function saveEditedProfileData(data, button) {
-  //Показать лоадер в кнопке
   renderLoading(true, button);
-  return updateProfileInfo(data);
-}
-
-//Функция сохранить новый аватар. Форма с аватаром
-function saveAvatarData(avatarLink, button) {
-  //Показать лоадер в кнопке
-  renderLoading(true, button);
-  return updateAvatar(avatarLink);
+  //Обработать ответ от сервера
+  updateProfileInfo(data)
+    .then((profileInfo) => {
+      profileTitle.textContent = profileInfo.name;
+      profileDescription.textContent = profileInfo.about;
+      closeAndClearForm(popupEditProfile, editProfileForm);
+    })
+    .catch((err) => {
+      alert("Упс! Видимо что-то пошло не так! Невозможно внести изменения...")
+      console.error("Ошибка при обновлении данных профиля!", err)
+    })
+    .finally(() => renderLoading(false, button));
 }
 
 //Функция добавить карточку. Форма с новой карточкой.
 function saveImageData(data, button) {
-  //Показать лоадер в кнопке
   renderLoading(true, button);
-  return addNewCard(data);
+  //Обработать ответ с сервера
+  addNewCard(data)
+    .then((card) => {
+      //Добавить новую карточку в начало разметки
+      placesList.prepend(createCard(card, prepareDeleteCard, toFullImage, changeLike, userId));
+      closeAndClearForm(popupNewCard, newPlaceForm);
+    })
+    .catch((err) => {
+      alert("Упс! Видимо что-то пошло не так! Невозможно добавить карточку...")
+      console.error("Ошибка при добавлении карточки!", err)
+    })
+    .finally(() => renderLoading(false, button));
 }
 
-//Функция установить Id карточке для ее удаления
-function setIdToDeleteCard(cardId) {
-  cardIdToDelete = cardId;
-}
-
-//Функция удалить карточку
-function handleDeleteCard(cardId){
-  setIdToDeleteCard(cardId)
+//Функция открыть попап подтверждения удаления
+function prepareDeleteCard(card) {
+  cardToDelete = card;
   openModal(confirmDeletePopup);
 }
 
 //Функция подтвердить удаление с сервера
 function handleSubmitDeleteCard() {
-  return deleteCard(cardIdToDelete);
+  cardId = cardToDelete.getAttribute("card-id");
+  //Обработать ответ с сервера
+  deleteCard(cardId)
+    .then(() => {
+      cardToDelete.closest(".card").remove();
+      //Снять слушатель с кнопки удаления - "корзинки"
+      cardToDelete.querySelector(".card__delete-button").removeEventListener("submit", prepareDeleteCard);
+      closeAndClearForm(confirmDeletePopup, confirmDeleteForm);
+    })
+    .catch((err) => {
+      alert("Упс! Видимо что-то пошло не так! Невозможно удалить карточку...")
+      console.error("Упс! Ошибка при удалении карточки!", err)
+    });
 }
 
-//Функция очистить форму и закрыть попап при запросе на сервер
+//Функция сохранить новый Аватар. Форма с Аватаром
+function saveAvatarData(avatarLink, button) {
+  renderLoading(true, button);
+  //Обработать ответ с сервера
+  updateAvatar(avatarLink)
+    .then((data) => {
+      profileAvatar.style.backgroundImage = `url(${data.avatar})`;
+      closeAndClearForm(popupAvatar, avatarForm);
+    })
+    .catch((err) => {
+      alert("Упс! Видимо что-то пошло не так! Невозможно поменять аватар...")
+      console.error("Ошибка с данными Аватара", err)
+    })
+    .finally(() => renderLoading(false, button));
+}
+
+//Функция универсальная - проверить и сохранить данные для всех форм.
+function handleFormSubmit(evt) {
+  evt.preventDefault();
+
+  const formElement = evt.target;
+  const formName = formElement.getAttribute("name");
+  const formSubmitButton = formElement.querySelector(validationSettings.submitButtonSelector);
+  const data = {};
+
+  switch (formName) {
+    case "edit-profile":
+      data.name = formElement.elements["name"].value;
+      data.job = formElement.elements["description"].value;
+      saveEditedProfileData(data, formSubmitButton);
+      break;
+    case "new-place":
+      data.name = formElement.elements["place-name"].value;
+      data.link = formElement.elements["link"].value;
+      saveImageData(data, formSubmitButton);
+      break;
+    case "confirm-delete":
+      handleSubmitDeleteCard();
+      break;
+    case "avatar":
+      data.link = formElement.elements["link"].value;
+      saveAvatarData(data.link, formSubmitButton);
+      break;
+    default:
+      console.error("К сожалению, форма не найдена");
+  }
+}
+
+//Функция очистить форму и закрыть попап при успешном ответе сервера
 function closeAndClearForm(popup, formElement) {
   formElement.reset();
   closeModal(popup);
+}
+
+//Функция показать на кнопке процесс загрузки данных
+function renderLoading(isLoading, button) {
+  if (isLoading) {
+    button.textContent = "Сохранение...";
+  } else {
+    button.textContent = "Сохранить";
+  }
+}
+
+// Функция управлять лайком
+function changeLike(cardId, evt, cardLikesCounter) {
+  const isLiked = evt.target.classList.value.includes(
+    "card__like-button_is-active"
+  );
+  if (isLiked) {
+    //Обработать ответ от сервера
+    deleteLike(cardId)
+      .then((data) => {
+        evt.target.classList.remove("card__like-button_is-active");
+        cardLikesCounter.textContent = data.likes.length;
+      })
+      .catch((err) => console.error("Невозможно удалить лайк", err));
+  } else {
+    //Обработать ответ от сервера
+    addLike(cardId)
+      .then((data) => {
+        evt.target.classList.add("card__like-button_is-active");
+        cardLikesCounter.textContent = data.likes.length;
+      })
+      .catch((err) => console.error("Невозможно поставить лайк", err));
+  }
 }
 
 // Функция увеличить размер картинки
@@ -126,103 +229,6 @@ function toFullImage(data) {
   previewCaption.textContent = data.name;
 }
 
-// Функция управлять лайком
-function changeLike(cardId, evt, cardLikesCounter) {
-  const isLiked = evt.target.classList.value.includes("card__like-button_is-active");
-  if (isLiked) {
-    deleteLike(cardId)
-      .then((data) => {
-        evt.target.classList.remove("card__like-button_is-active");
-        cardLikesCounter.textContent = data.likes.length;
-      })
-      .catch((err) => console.error("Невозможно удалить лайк", err));
-  } else {
-    addLike(cardId)
-      .then((data) => {
-        evt.target.classList.add("card__like-button_is-active");
-        cardLikesCounter.textContent = data.likes.length;
-      })
-      .catch((err) => console.error("Невозможно поставить лайк", err));
-  }
-}
-
-//Функция показать процесс загрузки данных
-function renderLoading(isLoading, button) {
-  if (isLoading) {
-    button.textContent = "Сохранение...";
-  } else {
-    button.textContent = "Сохранить";
-  }
-}
-
-//Функция универсальная проверить и сохранить данные для всех форм.
-//Взаимодействие с сервером.
-function handleFormSubmit(evt) {
-  evt.preventDefault();
-
-  const formElement = evt.target;
-  const popup = formElement.closest(".popup");
-  const formName = formElement.getAttribute("name");
-  const formSubmitButton = formElement.querySelector(validationSettings.submitButtonSelector);
-  const data = {};
-
-  switch (formName) {
-    case "edit-profile":
-      data.name = formElement.elements["name"].value;
-      data.job = formElement.elements["description"].value;
-      saveEditedProfileData(data, formSubmitButton)
-        .then((profileInfo) => {
-          profileTitle.textContent = profileInfo.name;
-          profileDescription.textContent = profileInfo.about;
-          closeAndClearForm(popup, formElement);
-        })
-        .catch((err) => console.error("Ошибка с данными Профиля", err))
-        .finally(() => renderLoading(false, formSubmitButton));
-    break;
-    case "new-place":
-      data.name = formElement.elements["place-name"].value;
-      data.link = formElement.elements["link"].value;
-      saveImageData(data, formSubmitButton)
-        .then((card) => {
-          //Добавить новую карточку в начало разметки
-          placesList.prepend(createCard(card, handleDeleteCard, toFullImage, changeLike, userId));
-          closeAndClearForm(popup, formElement);
-        })
-        .catch((err) =>
-          console.error("Упс! Ошибка при добавлении карточки!", err)
-        )
-        .finally(() => renderLoading(false, formSubmitButton));
-    break;
-    case "confirm-delete":
-      handleSubmitDeleteCard()
-        .then(() => {
-          const cards = Array.from(document.querySelectorAll(".card"));
-          cards.forEach((card) => {
-            if (card.getAttribute("card-id") === cardIdToDelete) {
-              card.closest(".card").remove();
-            }
-          });
-          //Снять слушатель подтверждения удаления карточки
-          formElement.removeEventListener("submit", handleSubmitDeleteCard);
-          closeAndClearForm(popup, formElement);
-        })
-        .catch((err) => console.error("Упс! Ошибка при удалении карточки!", err));
-    break;
-    case "avatar":
-      data.link = formElement.elements["link"].value;
-      saveAvatarData(data.link, formSubmitButton)
-        .then((data) => {
-          profileAvatar.style.backgroundImage = `url(${data.avatar})`;
-          closeAndClearForm(popup, formElement);
-        })
-        .catch((err) => console.error("Ошибка с данными Аватара", err))
-        .finally(() => renderLoading(false, formSubmitButton));
-      break;
-    default:
-      console.error("К сожалению, форма не найдена");
-  }
-}
-
 //Навесить слушатель сабмита на каждую форму
 forms.forEach((formElement) => {
   formElement.addEventListener("submit", handleFormSubmit);
@@ -232,6 +238,8 @@ forms.forEach((formElement) => {
 profileAvatar.addEventListener("click", () => {
   openModal(popupAvatar);
   clearValidation(popupAvatar, validationSettings);
+  //Очистить форму
+  avatarForm.reset();
 });
 
 //Навесить слушатель на кнопку редактирования Профиля
@@ -245,6 +253,7 @@ profileEditButton.addEventListener("click", () => {
 addCardButton.addEventListener("click", () => {
   openModal(popupNewCard);
   clearValidation(popupNewCard, validationSettings);
+  newPlaceForm.reset();
 });
 
 //Добавить класс плавного открытия/закрытия каждому попапу
